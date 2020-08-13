@@ -8,31 +8,38 @@ import json
 from flask_cors import CORS
 app = Flask(__name__)
 CORS(app)
+
 ##todas las siguientes funciones trabajan sobre arreglos de numpy es decir los parametros de entrada deben ser np.arrays
 ##Convertir las fechas en unix
-# install dependecies doc -> https://medium.com/python-pandemonium/better-python-dependency-and-package-management-b5d8ea29dff1
 
 
+##Lo unico que cambia es el metodo que trabaja con las fechas pasa de usar to_timeStamp a to_timeStampH, el resto
+##se manteiene igual
 
-
-# ---- Integral ----
+##Implementación del algoritmo de cesar
+##todas las siguientes funciones trabajan sobre arreglos de numpy es decir los parametros de entrada deben ser np.arrays
+##Convertir las fechas en unix
+def to_timeStampH(arr):
+    return (pd.to_datetime(arr).hour) + ((pd.to_datetime(arr).minute/60) + (pd.to_datetime(arr).second/3600))
 def to_timeStamp(arr):
-    return ((pd.to_datetime(arr) - pd.Timestamp("1970-01-01T00:00:00Z")) / pd.Timedelta('1s')) 
-def integrate(x,y):
+    return ((pd.to_datetime(arr) - pd.Timestamp("1970-01-01")) / pd.Timedelta('1h'))
+def integrateSimpsUT(x,y):
     x = to_timeStamp(x)
-    pot = 0
-    for i in range(1,x.shape[0]):
-        pot += ((x[i]-x[i-1])*y[i])/(60*60)
-    return pot
+    return integrate.simps(y,x)
+def to_json(df):
+    parsed = df.to_json(orient="table")
+    result = json.loads(parsed)
+    del result['schema']
+    return result
 def integrateDF(df):
     dfn = pd.DataFrame(columns=['estacion','radiacion','maximo','minimo'])
     estacion = df["estacion"].unique()
     for i in estacion:
         es = df[df['estacion'] == i]
-        x = np.array(es["fecha"])
+        x = np.array(es["Fecha"])
         y = np.array(es["radiacion"])
-        dfn.loc[len(dfn)] = {'estacion':i, 'radiacion':integrate(x,y), 'maximo':np.amax(y), 'minimo':np.amin(y)}
-    return dfn 
+        dfn.loc[len(dfn)] = {'estacion':i, 'radiacion':integrateSimpsUT(x,y), 'maximo':np.amax(y), 'minimo':np.amin(y)}
+    return  to_json(dfn)
 
 
 ## Consultas a la API
@@ -40,30 +47,26 @@ BASE_URI_SERVER = "http://localhost/api"
 
 print()
 
+# retorna el potencial de cada estación en una fecha espesifica
 def getPotencialByDate(specificDate):
-    date = specificDate + " 00:00:00" # para recuperar la radiacion de todo el día
+    date = specificDate + " 00:00:00" # radiacion de todo el día
+    print("--Calculando potencial para fecha: " +date)
     response = requests.get(url = BASE_URI_SERVER + "/getRadiacionByDate/"+date)
     data = {}
     if (response.status_code == 200):
          data = response.json()
-         df = pd.DataFrame.from_dict(data, orient='columns')
-         data = integrateDF(df).to_json(orient='records')[1:-1].replace('},{', '} {')
+         if(len(data) > 0):
+             df = pd.DataFrame.from_dict(data, orient='columns')
+             data = integrateDF(df)
     return jsonify(data)
 
-def getRadiacionByStation(station, specificDate):
-    date = specificDate + " 00:00:00"
-    response = requests.get(url = BASE_URI_SERVER + "/getRadiacionByEstacionAndDate/"+station+"/"+date)
-    data = response.json()
-    return jsonify(data)
+
 
 # routes
 @app.route("/get-potencial/<specificDate>")
 def getPotencial(specificDate):
     return getPotencialByDate(specificDate)
 
-@app.route("/get-radiationByStation/<station>/<specificDate>")
-def getRadiaction(station, specificDate):
-    return getRadiacionByStation(station, specificDate)
 
 
 
