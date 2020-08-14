@@ -22,7 +22,7 @@ CORS(app)
 def to_timeStampH(arr):
     return (pd.to_datetime(arr).hour) + ((pd.to_datetime(arr).minute/60) + (pd.to_datetime(arr).second/3600))
 def to_timeStamp(arr):
-    return ((pd.to_datetime(arr) - pd.Timestamp("1970-01-01")) / pd.Timedelta('1h'))
+    return ((pd.to_datetime(arr) - pd.Timestamp("1970-01-01T00:00:00Z")) / pd.Timedelta('1h'))
 def integrateSimpsUT(x,y):
     x = to_timeStamp(x)
     return integrate.simps(y,x)
@@ -36,7 +36,7 @@ def integrateDF(df):
     estacion = df["estacion"].unique()
     for i in estacion:
         es = df[df['estacion'] == i]
-        x = np.array(es["Fecha"])
+        x = np.array(es["fecha"])
         y = np.array(es["radiacion"])
         dfn.loc[len(dfn)] = {'estacion':i, 'radiacion':integrateSimpsUT(x,y), 'maximo':np.amax(y), 'minimo':np.amin(y)}
     return  to_json(dfn)
@@ -47,8 +47,8 @@ BASE_URI_SERVER = "http://localhost/api"
 
 print()
 
-# retorna el potencial de cada estación en una fecha espesifica
-def getPotencialByDate(specificDate):
+# retorna el potencial en una fecha espesifica
+def getPotencialByDateFunction(specificDate):
     date = specificDate + " 00:00:00" # radiacion de todo el día
     print("--Calculando potencial para fecha: " +date)
     response = requests.get(url = BASE_URI_SERVER + "/getRadiacionByDate/"+date)
@@ -60,12 +60,27 @@ def getPotencialByDate(specificDate):
              data = integrateDF(df)
     return jsonify(data)
 
-
+# Potencial para todas las estaciones
+def getPotencialFunction():
+    print("--Calculando potencial para todas las estaciones: ")
+    response = requests.get(url = BASE_URI_SERVER + "/getRadiacion")
+    data = {}
+    if (response.status_code == 200):
+         data = response.json()
+         if(len(data) > 0):
+             df = pd.DataFrame.from_dict(data, orient='columns')
+             data = integrateDF(df)
+    return jsonify(data)
 
 # routes
-@app.route("/get-potencial/<specificDate>")
-def getPotencial(specificDate):
-    return getPotencialByDate(specificDate)
+@app.route("/getPotencial")
+def getPotencial():
+    return getPotencialFunction()
+
+@app.route("/getPotencialByDate/<specificDate>")
+def getPotencialByDate(specificDate):
+    return getPotencialByDateFunction(specificDate)
+
 
 
 
