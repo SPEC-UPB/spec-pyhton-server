@@ -22,10 +22,10 @@ CORS(app)
 def to_timeStampH(arr):
     return (pd.to_datetime(arr).hour) + ((pd.to_datetime(arr).minute/60) + (pd.to_datetime(arr).second/3600))
 def to_timeStamp(arr):
-    return ((pd.to_datetime(arr) - pd.Timestamp("1970-01-01T00:00:00Z")) / pd.Timedelta('1h'))
+    return ((pd.to_datetime(arr) - pd.Timestamp("1970-01-01T00:00:00Z")) / pd.Timedelta('1h')) 
 def integrateSimpsUT(x,y):
     x = to_timeStamp(x)
-    return integrate.simps(y,x)
+    return np.trapz(y,x=x)##integrate.simps(y,x)
 def to_json(df):
     parsed = df.to_json(orient="table")
     result = json.loads(parsed)
@@ -38,9 +38,10 @@ def integrateDF(df):
         es = df[df['estacion'] == i]
         x = np.array(es["fecha"])
         y = np.array(es["radiacion"])
-        dfn.loc[len(dfn)] = {'estacion':i, 'radiacion':integrateSimpsUT(x,y), 'maximo':np.amax(y), 'minimo':np.amin(y)}
-    return  to_json(dfn)
-
+        dfn.loc[len(dfn)] = {'estacion':i, 'radiacion':integrateSimpsUT(x,y), 'maximo':np.amax(y), 'minimo':np.amin(y[y != 0])}
+    return dfn
+def integrateDfJSON(df):
+    return to_json(integrateDF(df))
 
 ## Consultas a la API
 BASE_URI_SERVER = "http://localhost/api"
@@ -57,7 +58,7 @@ def getPotencialByDateFunction(specificDate):
          data = response.json()
          if(len(data) > 0):
              df = pd.DataFrame.from_dict(data, orient='columns')
-             data = integrateDF(df)
+             data = integrateDfJSON(df)
     return jsonify(data)
 
 # Potencial para todas las estaciones
@@ -69,8 +70,87 @@ def getPotencialFunction():
          data = response.json()
          if(len(data) > 0):
              df = pd.DataFrame.from_dict(data, orient='columns')
-             data = integrateDF(df)
+             data = integrateDfJSON(df)
     return jsonify(data)
+
+
+##Funciones de integracion por día, mes o año
+def integrateByDay(df):
+    dfn = pd.DataFrame(columns=['estacion','fecha','radiacion','maximo','minimo'])
+    estacion = df["estacion"].unique()
+    ran = pd.to_datetime((df['fecha'].apply(lambda x:(pd.to_datetime(x)).strftime('%Y-%m-%d') )).unique())
+    for i in estacion:
+        es = df[df['estacion'] == i]
+        for j in ran:
+            ess = es[((pd.to_datetime(es['fecha'])).dt.year == j.year) & ((pd.to_datetime(es['fecha'])).dt.month == j.month) 
+                    & ((pd.to_datetime(es['fecha'])).dt.day == j.day)]
+            x = np.array(ess["fecha"])
+            y = np.array(ess["radiacion"])
+            if x.shape[0] > 0:
+                try:
+                    dfn.loc[len(dfn)] = {'estacion':i,'fecha':j.strftime('%Y-%m-%d') ,'radiacion':integrateSimpsUT(x,y), 'maximo':np.amax(y), 'minimo':np.amin(y[y != 0])}
+                except:
+                    dfn.loc[len(dfn)] = {'estacion':i,'fecha':j.strftime('%Y-%m-%d') ,'radiacion':integrateSimpsUT(x,y), 'maximo':np.amax(y), 'minimo':np.amin(y)}
+    return to_json(dfn)
+def integrateByMonth(df):
+    dfn = pd.DataFrame(columns=['estacion','fecha','radiacion','maximo','minimo'])
+    estacion = df["estacion"].unique()
+    ran = pd.to_datetime((df['fecha'].apply(lambda x:(pd.to_datetime(x)).strftime('%Y-%m') )).unique())
+    for i in estacion:
+        es = df[df['estacion'] == i]
+        for j in ran:
+            ess = es[((pd.to_datetime(es['fecha'])).dt.year == j.year) & ((pd.to_datetime(es['fecha'])).dt.month == j.month)]
+            x = np.array(ess["fecha"])
+            y = np.array(ess["radiacion"])
+            if x.shape[0] > 0:
+                try:
+                    dfn.loc[len(dfn)] = {'estacion':i,'fecha':j.strftime('%Y-%m') ,'radiacion':integrateSimpsUT(x,y), 'maximo':np.amax(y), 'minimo':np.amin(y[y != 0])}
+                except:
+                    dfn.loc[len(dfn)] = {'estacion':i,'fecha':j.strftime('%Y-%m') ,'radiacion':integrateSimpsUT(x,y), 'maximo':np.amax(y), 'minimo':np.amin(y)}
+    return to_json(dfn)
+def integrateByYear(df):
+    dfn = pd.DataFrame(columns=['estacion','fecha','radiacion','maximo','minimo'])
+    ran = pd.to_datetime((df['fecha'].apply(lambda x:(pd.to_datetime(x)).strftime('%Y') )).unique())
+    estacion = df["estacion"].unique()
+    for i in estacion:
+        es = df[df['estacion'] == i]
+        for j in ran:
+            ess = es[(pd.to_datetime(es['fecha'])).dt.year == j.year]
+            x = np.array(ess["fecha"])
+            y = np.array(ess["radiacion"])
+            if x.shape[0] > 0:
+                try:
+                    dfn.loc[len(dfn)] = {'estacion':i,'fecha':j.strftime('%Y') ,'radiacion':integrateSimpsUT(x,y), 'maximo':np.amax(y), 'minimo':np.amin(y[y != 0])}
+                except:
+                    dfn.loc[len(dfn)] = {'estacion':i,'fecha':j.strftime('%Y') ,'radiacion':integrateSimpsUT(x,y), 'maximo':np.amax(y), 'minimo':np.amin(y)}
+    return to_json(dfn)
+def integrateBy(df, by='day'):
+    if by == 'day':
+        return integrateByDay(df)
+    elif by == 'month':
+        return integrateByMonth(df)
+    elif by == 'year':
+        return integrateByYear(df)
+    else:
+        return "{data:'error'}"
+
+# Funciones para potencial por rango de fechas
+def getPotencialByDateRangeDayFunction(start_date, last_date):
+    print("--Calculando potencial para el rango de fechas: " + start_date + " - " + last_date)
+    response = requests.get(url = BASE_URI_SERVER + "/getRadiacionByRangeDate/" + start_date + " 00:00:00" + "/" + last_date + " 00:00:00")
+    data = {}
+    if (response.status_code == 200):
+         data = response.json()
+         if(len(data) > 0):
+             df = pd.DataFrame.from_dict(data, orient='columns')
+             data = integrateByDay(df)
+    return jsonify(data)
+
+def getPotencialByDateRangeYearFunction(start_date, last_date):
+    pass
+
+def getPotencialByDateRangeMonthFunction(start_date, last_date):
+    pass
 
 # routes
 @app.route("/getPotencial")
@@ -80,6 +160,18 @@ def getPotencial():
 @app.route("/getPotencialByDate/<specificDate>")
 def getPotencialByDate(specificDate):
     return getPotencialByDateFunction(specificDate)
+
+@app.route("/getPotencialByDateRangeDay/<start_date>/<last_date>")
+def getPotencialByDateRangeDay(start_date, last_date):
+    return getPotencialByDateRangeDayFunction(start_date, last_date)
+
+@app.route("/getPotencialByDateRangeYear/<start_date>/<last_date>")
+def getPotencialByDateRangeYear(start_date, last_date):
+    return getPotencialByDateRangeYearFunction(start_date, last_date)
+
+@app.route("/getPotencialByDateRangeMonth/<start_date>/<last_date>")
+def getPotencialByDateRangeMonth(start_date, last_date):
+    return getPotencialByDateRangeMonthFunction(start_date, last_date)
 
 
 
