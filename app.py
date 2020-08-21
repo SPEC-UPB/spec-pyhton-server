@@ -46,7 +46,6 @@ def integrateDfJSON(df):
 ## Consultas a la API
 BASE_URI_SERVER = "http://localhost/api"
 
-print()
 
 # retorna el potencial en una fecha espesifica
 def getPotencialByDateFunction(specificDate):
@@ -58,6 +57,7 @@ def getPotencialByDateFunction(specificDate):
          data = response.json()
          if(len(data) > 0):
              df = pd.DataFrame.from_dict(data, orient='columns')
+             #print((df[df['estacion'] == 'Ciudadela'])['fecha'])
              data = integrateDfJSON(df)
     return jsonify(data)
 
