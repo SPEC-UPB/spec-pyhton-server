@@ -22,7 +22,7 @@ CORS(app)
 def to_timeStampH(arr):
     return (pd.to_datetime(arr).hour) + ((pd.to_datetime(arr).minute/60) + (pd.to_datetime(arr).second/3600))
 def to_timeStamp(arr):
-    return ((pd.to_datetime(arr) - pd.Timestamp("1970-01-01T00:00:00Z")) / pd.Timedelta('1h')) 
+    return ((pd.to_datetime(arr) - pd.Timestamp("1970-01-01T00:00:00")) / pd.Timedelta('1h')) 
 def integrateSimpsUT(x,y):
     x = to_timeStamp(x)
     return np.trapz(y,x=x)##integrate.simps(y,x)
@@ -57,6 +57,7 @@ def getPotencialByDateFunction(specificDate):
          data = response.json()
          if(len(data) > 0):
              df = pd.DataFrame.from_dict(data, orient='columns')
+             print(df["fecha"])
              #print((df[df['estacion'] == 'Ciudadela'])['fecha'])
              data = integrateDfJSON(df)
     return jsonify(data)
