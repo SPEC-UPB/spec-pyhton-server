@@ -57,8 +57,6 @@ def getPotencialByDateFunction(specificDate):
          data = response.json()
          if(len(data) > 0):
              df = pd.DataFrame.from_dict(data, orient='columns')
-             print(df["fecha"])
-             #print((df[df['estacion'] == 'Ciudadela'])['fecha'])
              data = integrateDfJSON(df)
     return jsonify(data)
 
@@ -137,7 +135,7 @@ def integrateBy(df, by='day'):
 
 # Funciones para potencial por rango de fechas
 def getPotencialByDateRangeDayFunction(start_date, last_date):
-    print("--Calculando potencial para el rango de fechas: " + start_date + " - " + last_date)
+    print("--Calculando potencial por día para el rango de fechas: " + start_date + " - " + last_date)
     response = requests.get(url = BASE_URI_SERVER + "/getRadiacionByRangeDate/" + start_date + " 00:00:00" + "/" + last_date + " 00:00:00")
     data = {}
     if (response.status_code == 200):
@@ -148,10 +146,26 @@ def getPotencialByDateRangeDayFunction(start_date, last_date):
     return jsonify(data)
 
 def getPotencialByDateRangeYearFunction(start_date, last_date):
-    pass
+    print("--Calculando potencial por año para el rango de fechas: " + start_date + " - " + last_date)
+    response = requests.get(url = BASE_URI_SERVER + "/getRadiacionByRangeDate/" + start_date + " 00:00:00" + "/" + last_date + " 00:00:00")
+    data = {}
+    if (response.status_code == 200):
+         data = response.json()
+         if(len(data) > 0):
+             df = pd.DataFrame.from_dict(data, orient='columns')
+             data = integrateByYear(df)
+    return jsonify(data)
 
 def getPotencialByDateRangeMonthFunction(start_date, last_date):
-    pass
+    print("--Calculando potencial por mes para el rango de fechas: " + start_date + " - " + last_date)
+    response = requests.get(url = BASE_URI_SERVER + "/getRadiacionByRangeDate/" + start_date + " 00:00:00" + "/" + last_date + " 00:00:00")
+    data = {}
+    if (response.status_code == 200):
+         data = response.json()
+         if(len(data) > 0):
+             df = pd.DataFrame.from_dict(data, orient='columns')
+             data = integrateByMonth(df)
+    return jsonify(data)
 
 # routes
 @app.route("/getPotencial")
