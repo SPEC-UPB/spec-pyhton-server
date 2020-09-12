@@ -44,7 +44,7 @@ def integrateDfJSON(df):
     return to_json(integrateDF(df))
 
 ## Consultas a la API
-BASE_URI_SERVER = "http://localhost/api"
+BASE_URI_SERVER = "http://localhost:2050/api"
 
 
 # retorna el potencial en una fecha espesifica
