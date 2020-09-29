@@ -1,4 +1,5 @@
 from flask import Flask;
+from waitress import serve
 import pandas as pd
 import numpy as np
 from scipy import integrate
@@ -195,4 +196,4 @@ def getPotencialByDateRangeMonth(start_date, last_date):
 
 
 if __name__ == "__main__":
-    app.run(debug=False, host='0.0.0.0', port=5000)
+      serve(app, listen='*:5000')
