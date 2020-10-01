@@ -147,6 +147,8 @@ def getPotencialByDateRangeDayFunction(start_date, last_date):
     return jsonify(data)
 
 def getPotencialByDateRangeYearFunction(start_date, last_date):
+    start_date = start_date.split("-")[0]+"-01"+"-01"
+    last_date = last_date.split("-")[0]+"-12"+"-30"
     print("--Calculando potencial por año para el rango de fechas: " + start_date + " - " + last_date)
     response = requests.get(url = BASE_URI_SERVER + "/getRadiacionByRangeDate/" + start_date + " 00:00:00" + "/" + last_date + " 00:00:00")
     data = {}
@@ -155,9 +157,12 @@ def getPotencialByDateRangeYearFunction(start_date, last_date):
          if(len(data) > 0):
              df = pd.DataFrame.from_dict(data, orient='columns')
              data = integrateByYear(df)
+    print(data)
     return jsonify(data)
 
 def getPotencialByDateRangeMonthFunction(start_date, last_date):
+    start_date = start_date.split("-")[0]+"-"+start_date.split("-")[1]+"-01"
+    last_date = last_date.split("-")[0]+"-"+last_date.split("-")[1]+"-30"
     print("--Calculando potencial por mes para el rango de fechas: " + start_date + " - " + last_date)
     response = requests.get(url = BASE_URI_SERVER + "/getRadiacionByRangeDate/" + start_date + " 00:00:00" + "/" + last_date + " 00:00:00")
     data = {}
@@ -166,6 +171,7 @@ def getPotencialByDateRangeMonthFunction(start_date, last_date):
          if(len(data) > 0):
              df = pd.DataFrame.from_dict(data, orient='columns')
              data = integrateByMonth(df)
+    print(data)
     return jsonify(data)
 
 # routes
