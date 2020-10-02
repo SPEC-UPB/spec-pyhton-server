@@ -37,6 +37,7 @@ def integrateDF(df):
     estacion = df["estacion"].unique()
     for i in estacion:
         es = df[df['estacion'] == i]
+        es = es.sort_values(by='fecha')
         x = np.array(es["fecha"])
         y = np.array(es["radiacion"])
         dfn.loc[len(dfn)] = {'estacion':i, 'radiacion':integrateSimpsUT(x,y), 'maximo':np.amax(y), 'minimo':np.amin(y[y != 0])}
@@ -84,6 +85,7 @@ def integrateByDay(df):
         for j in ran:
             ess = es[((pd.to_datetime(es['fecha'])).dt.year == j.year) & ((pd.to_datetime(es['fecha'])).dt.month == j.month) 
                     & ((pd.to_datetime(es['fecha'])).dt.day == j.day)]
+            ess = ess.sort_values(by='fecha')
             x = np.array(ess["fecha"])
             y = np.array(ess["radiacion"])
             if x.shape[0] > 0:
@@ -100,6 +102,7 @@ def integrateByMonth(df):
         es = df[df['estacion'] == i]
         for j in ran:
             ess = es[((pd.to_datetime(es['fecha'])).dt.year == j.year) & ((pd.to_datetime(es['fecha'])).dt.month == j.month)]
+            ess = ess.sort_values(by='fecha')
             x = np.array(ess["fecha"])
             y = np.array(ess["radiacion"])
             if x.shape[0] > 0:
@@ -116,8 +119,10 @@ def integrateByYear(df):
         es = df[df['estacion'] == i]
         for j in ran:
             ess = es[(pd.to_datetime(es['fecha'])).dt.year == j.year]
+            ess = ess.sort_values(by='fecha')
             x = np.array(ess["fecha"])
             y = np.array(ess["radiacion"])
+            print(x)
             if x.shape[0] > 0:
                 try:
                     dfn.loc[len(dfn)] = {'estacion':i,'fecha':j.strftime('%Y') ,'radiacion':integrateSimpsUT(x,y), 'maximo':np.amax(y), 'minimo':np.amin(y[y != 0])}
