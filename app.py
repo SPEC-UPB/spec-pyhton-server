@@ -167,7 +167,11 @@ def getPotencialByDateRangeYearFunction(start_date, last_date):
 
 def getPotencialByDateRangeMonthFunction(start_date, last_date):
     start_date = start_date.split("-")[0]+"-"+start_date.split("-")[1]+"-01"
-    last_date = last_date.split("-")[0]+"-"+last_date.split("-")[1]+"-30"
+    if(last_date.split("-")[1] == "02"):
+        last_date = last_date.split("-")[0]+"-"+last_date.split("-")[1]+"-28"
+    else:
+        last_date = last_date.split("-")[0]+"-"+last_date.split("-")[1]+"-30"
+    
     print("--Calculando potencial por mes para el rango de fechas: " + start_date + " - " + last_date)
     response = requests.get(url = BASE_URI_SERVER + "/getRadiacionByRangeDate/" + start_date + " 00:00:00" + "/" + last_date + " 00:00:00")
     data = {}
