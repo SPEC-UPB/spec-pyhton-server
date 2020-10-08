@@ -122,7 +122,6 @@ def integrateByYear(df):
             ess = ess.sort_values(by='fecha')
             x = np.array(ess["fecha"])
             y = np.array(ess["radiacion"])
-            print(x)
             if x.shape[0] > 0:
                 try:
                     dfn.loc[len(dfn)] = {'estacion':i,'fecha':j.strftime('%Y') ,'radiacion':integrateSimpsUT(x,y), 'maximo':np.amax(y), 'minimo':np.amin(y[y != 0])}
@@ -162,7 +161,7 @@ def getPotencialByDateRangeYearFunction(start_date, last_date):
          if(len(data) > 0):
              df = pd.DataFrame.from_dict(data, orient='columns')
              data = integrateByYear(df)
-    print(data)
+   
     return jsonify(data)
 
 def getPotencialByDateRangeMonthFunction(start_date, last_date):
@@ -180,7 +179,6 @@ def getPotencialByDateRangeMonthFunction(start_date, last_date):
          if(len(data) > 0):
              df = pd.DataFrame.from_dict(data, orient='columns')
              data = integrateByMonth(df)
-    print(data)
     return jsonify(data)
 
 # routes
