@@ -7,6 +7,8 @@ from flask import jsonify
 import requests
 import json
 from flask_cors import CORS
+from datetime import datetime
+from datetime import timedelta
 app = Flask(__name__)
 CORS(app)
 
@@ -76,10 +78,13 @@ def getPotencialFunction():
 
 
 ##Funciones de integracion por día, mes o año
-def integrateByDay(df):
+def integrateByDay(df,start,end):
     dfn = pd.DataFrame(columns=['estacion','fecha','radiacion','maximo','minimo'])
     estacion = df["estacion"].unique()
-    ran = pd.to_datetime((df['fecha'].apply(lambda x:(pd.to_datetime(x)).strftime('%Y-%m-%d') )).unique())
+    ##ran = pd.to_datetime((df['fecha'].apply(lambda x:(pd.to_datetime(x)).strftime('%Y-%m-%d') )).unique())
+    fechaIn = datetime.strptime(start, '%Y-%m-%d')
+    fechaEn = datetime.strptime(end, '%Y-%m-%d')
+    ran = pd.date_range(fechaIn,fechaEn,freq='d')
     for i in estacion:
         es = df[df['estacion'] == i]
         for j in ran:
@@ -94,10 +99,14 @@ def integrateByDay(df):
                 except:
                     dfn.loc[len(dfn)] = {'estacion':i,'fecha':j.strftime('%Y-%m-%d') ,'radiacion':integrateSimpsUT(x,y), 'maximo':np.amax(y), 'minimo':np.amin(y)}
     return to_json(dfn)
-def integrateByMonth(df):
+
+def integrateByMonth(df,start,end):
     dfn = pd.DataFrame(columns=['estacion','fecha','radiacion','maximo','minimo'])
     estacion = df["estacion"].unique()
-    ran = pd.to_datetime((df['fecha'].apply(lambda x:(pd.to_datetime(x)).strftime('%Y-%m') )).unique())
+    #ran = pd.to_datetime((df['fecha'].apply(lambda x:(pd.to_datetime(x)).strftime('%Y-%m') )).unique())
+    fechaIn = datetime.strptime(start, '%Y-%m-%d')
+    fechaEn = datetime.strptime(end, '%Y-%m-%d')
+    ran = pd.date_range(fechaIn,fechaEn,freq='m')
     for i in estacion:
         es = df[df['estacion'] == i]
         for j in ran:
@@ -111,9 +120,13 @@ def integrateByMonth(df):
                 except:
                     dfn.loc[len(dfn)] = {'estacion':i,'fecha':j.strftime('%Y-%m') ,'radiacion':integrateSimpsUT(x,y), 'maximo':np.amax(y), 'minimo':np.amin(y)}
     return to_json(dfn)
-def integrateByYear(df):
+
+def integrateByYear(df,start,end):
     dfn = pd.DataFrame(columns=['estacion','fecha','radiacion','maximo','minimo'])
-    ran = pd.to_datetime((df['fecha'].apply(lambda x:(pd.to_datetime(x)).strftime('%Y') )).unique())
+    #ran = pd.to_datetime((df['fecha'].apply(lambda x:(pd.to_datetime(x)).strftime('%Y') )).unique())
+    fechaIn = datetime.strptime(start, '%Y-%m-%d')
+    fechaEn = datetime.strptime(end, '%Y-%m-%d')
+    ran = pd.date_range(fechaIn,fechaEn,freq='y')
     estacion = df["estacion"].unique()
     for i in estacion:
         es = df[df['estacion'] == i]
@@ -128,15 +141,8 @@ def integrateByYear(df):
                 except:
                     dfn.loc[len(dfn)] = {'estacion':i,'fecha':j.strftime('%Y') ,'radiacion':integrateSimpsUT(x,y), 'maximo':np.amax(y), 'minimo':np.amin(y)}
     return to_json(dfn)
-def integrateBy(df, by='day'):
-    if by == 'day':
-        return integrateByDay(df)
-    elif by == 'month':
-        return integrateByMonth(df)
-    elif by == 'year':
-        return integrateByYear(df)
-    else:
-        return "{data:'error'}"
+
+
 
 # Funciones para potencial por rango de fechas
 def getPotencialByDateRangeDayFunction(start_date, last_date):
@@ -147,12 +153,13 @@ def getPotencialByDateRangeDayFunction(start_date, last_date):
          data = response.json()
          if(len(data) > 0):
              df = pd.DataFrame.from_dict(data, orient='columns')
-             data = integrateByDay(df)
+             data = integrateByDay(df, start_date, last_date)
     return jsonify(data)
 
 def getPotencialByDateRangeYearFunction(start_date, last_date):
     start_date = start_date.split("-")[0]+"-01"+"-01"
-    last_date = last_date.split("-")[0]+"-12"+"-30"
+    last_date = last_date.split("-")[0]+"-12"+"-31"
+    last_date = (pd.to_datetime(last_date, format='%Y-%m-%d') + pd.tseries.offsets.YearEnd(0)).strftime('%Y-%m-%d')
     print("--Calculando potencial por año para el rango de fechas: " + start_date + " - " + last_date)
     response = requests.get(url = BASE_URI_SERVER + "/getRadiacionByRangeDate/" + start_date + " 00:00:00" + "/" + last_date + " 00:00:00")
     data = {}
@@ -160,16 +167,14 @@ def getPotencialByDateRangeYearFunction(start_date, last_date):
          data = response.json()
          if(len(data) > 0):
              df = pd.DataFrame.from_dict(data, orient='columns')
-             data = integrateByYear(df)
+             data = integrateByYear(df, start_date, last_date)
    
     return jsonify(data)
 
 def getPotencialByDateRangeMonthFunction(start_date, last_date):
     start_date = start_date.split("-")[0]+"-"+start_date.split("-")[1]+"-01"
-    if(last_date.split("-")[1] == "02"):
-        last_date = last_date.split("-")[0]+"-"+last_date.split("-")[1]+"-28"
-    else:
-        last_date = last_date.split("-")[0]+"-"+last_date.split("-")[1]+"-30"
+    last_date = last_date.split("-")[0]+"-"+last_date.split("-")[1]+"-28"
+    last_date = (pd.to_datetime(last_date, format='%Y-%m-%d') + pd.tseries.offsets.MonthEnd(0)).strftime('%Y-%m-%d')
     
     print("--Calculando potencial por mes para el rango de fechas: " + start_date + " - " + last_date)
     response = requests.get(url = BASE_URI_SERVER + "/getRadiacionByRangeDate/" + start_date + " 00:00:00" + "/" + last_date + " 00:00:00")
@@ -178,7 +183,7 @@ def getPotencialByDateRangeMonthFunction(start_date, last_date):
          data = response.json()
          if(len(data) > 0):
              df = pd.DataFrame.from_dict(data, orient='columns')
-             data = integrateByMonth(df)
+             data = integrateByMonth(df, start_date, last_date)
     return jsonify(data)
 
 # routes
