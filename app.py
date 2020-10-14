@@ -43,7 +43,8 @@ def integrateDF(df):
         x = np.array(es["fecha"])
         y = np.array(es["radiacion"])
         if x.shape[0] > 0:
-            dfn.loc[len(dfn)] = {'estacion':i, 'radiacion':integrateSimpsUT(x,y), 'maximo':np.amax(y), 'minimo':np.amin(y)}
+            if np.amax(y) > 100:
+                dfn.loc[len(dfn)] = {'estacion':i, 'radiacion':integrateSimpsUT(x,y), 'maximo':np.amax(y), 'minimo':np.amin(y)}
     return dfn
 def integrateDfJSON(df):
     return to_json(integrateDF(df))
